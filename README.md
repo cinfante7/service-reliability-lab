@@ -79,6 +79,6 @@ descriptive, not confidence intervals. No universal policy improvement is promis
 - [Notion case-study draft](docs/notion-case-study.md): prepared for later integration.
 - [Raw primary CSV](results/runs.csv) / [JSON](results/runs.json); [all sensitivity runs](results/sensitivity/runs.json).
 
-Private repository: [cinfante7/service-reliability-lab](https://github.com/cinfante7/service-reliability-lab).
-Public release remains pending. Access to the private repository is required to view
-these sources; the project has not been made public.
+Public repository: [cinfante7/service-reliability-lab](https://github.com/cinfante7/service-reliability-lab).
+Released with Christopher Infante's approval. All data and results are synthetic
+demonstrations; no client or production records are included.

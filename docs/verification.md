@@ -3,7 +3,8 @@
 Environment: Windows, **Python 3.13.7**, Git 2.53.0.windows.2. No packages or software
 were installed. All experiment inputs are synthetic; no credentials or unrelated
 personal records were accessed. This verification occurred before the subsequently
-authorized private GitHub handoff; public release remains pending.
+authorized private GitHub handoff. Christopher subsequently approved public release;
+the repository was made public without changes to simulation code or result artifacts.
 
 ## Executed commands and outcomes
 

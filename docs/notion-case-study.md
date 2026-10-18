@@ -36,8 +36,6 @@ decisions; it does not train a model or claim an audit certification.
 
 **Integration sources:** results/report.html, results/summary.md, results/runs.csv,
 results/sensitivity/runs.json, docs/metrics.md, docs/architecture.md,
-docs/traceability.md and docs/decision-brief.md. Add public links only after publishing
-is separately approved. The repository is private at
-https://github.com/cinfante7/service-reliability-lab for authorized reviewers; do not
-add that link to a public website or present it as publicly accessible. Public
-release and Notion integration remain separate actions.
+docs/traceability.md and docs/decision-brief.md. Public repository, released with
+Christopher Infante's approval: https://github.com/cinfante7/service-reliability-lab.
+Notion integration is handled separately; this file is the source draft.
