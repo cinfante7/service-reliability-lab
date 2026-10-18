@@ -1,0 +1,187 @@
+{
+  "scenario": "hand_check",
+  "seed": 17,
+  "policy": "timing_fixture",
+  "requests": 4,
+  "arrival_rate_s": 0,
+  "duration_s": 2,
+  "capacity": 1,
+  "outage_start_s": null,
+  "outage_end_s": null,
+  "impaired_service_s": 2.0,
+  "timeout_s": 2,
+  "retry_limit": 0,
+  "breaker_enabled": false,
+  "failure_threshold": 5,
+  "cooldown_s": 5.0,
+  "successes": 2,
+  "availability": 0.5,
+  "within_1s": 0.5,
+  "p95_success_s": 0.9,
+  "p95_terminal_s": 0.9,
+  "attempts": 2,
+  "attempts_per_request": 0.5,
+  "failed_attempts": 0,
+  "breaker_rejections": 0,
+  "breaker_opens": 0,
+  "queue_overflows": 2,
+  "max_queue_depth": 1,
+  "queue_limit": 1,
+  "request_deadline_s": 2,
+  "dependency_work_s": 1.0,
+  "last_reserved_completion_s": 1.0,
+  "successes_arriving_after_75s": 0,
+  "completed_requests": 4,
+  "trace": [
+    {
+      "time": 0,
+      "kind": "attempt_requested",
+      "request": 0,
+      "attempt": 0
+    },
+    {
+      "time": 0,
+      "kind": "attempt_admitted",
+      "request": 0,
+      "attempt": 0,
+      "start": 0,
+      "end": 0.5,
+      "response": 0.5,
+      "impaired": false,
+      "probe": false,
+      "generation": 0,
+      "queued": 0
+    },
+    {
+      "time": 0.1,
+      "kind": "attempt_requested",
+      "request": 1,
+      "attempt": 0
+    },
+    {
+      "time": 0.1,
+      "kind": "attempt_admitted",
+      "request": 1,
+      "attempt": 0,
+      "start": 0.5,
+      "end": 1.0,
+      "response": 1.0,
+      "impaired": false,
+      "probe": false,
+      "generation": 0,
+      "queued": 1
+    },
+    {
+      "time": 0.2,
+      "kind": "attempt_requested",
+      "request": 2,
+      "attempt": 0
+    },
+    {
+      "time": 0.2,
+      "kind": "completion",
+      "request": 2,
+      "arrival": 0.2,
+      "completed_at": 0.2,
+      "latency_s": 0.0,
+      "reason": "queue_overflow",
+      "success": false,
+      "attempts": 0
+    },
+    {
+      "time": 0.3,
+      "kind": "attempt_requested",
+      "request": 3,
+      "attempt": 0
+    },
+    {
+      "time": 0.3,
+      "kind": "completion",
+      "request": 3,
+      "arrival": 0.3,
+      "completed_at": 0.3,
+      "latency_s": 0.0,
+      "reason": "queue_overflow",
+      "success": false,
+      "attempts": 0
+    },
+    {
+      "time": 0.5,
+      "kind": "attempt_response",
+      "request": 0,
+      "attempt": 0,
+      "success": true,
+      "probe": false,
+      "stale": false
+    },
+    {
+      "time": 0.5,
+      "kind": "completion",
+      "request": 0,
+      "arrival": 0,
+      "completed_at": 0.5,
+      "latency_s": 0.5,
+      "reason": "success",
+      "success": true,
+      "attempts": 1
+    },
+    {
+      "time": 1.0,
+      "kind": "attempt_response",
+      "request": 1,
+      "attempt": 0,
+      "success": true,
+      "probe": false,
+      "stale": false
+    },
+    {
+      "time": 1.0,
+      "kind": "completion",
+      "request": 1,
+      "arrival": 0.1,
+      "completed_at": 1.0,
+      "latency_s": 0.9,
+      "reason": "success",
+      "success": true,
+      "attempts": 1
+    }
+  ],
+  "outcomes": [
+    {
+      "request": 0,
+      "arrival": 0,
+      "completed_at": 0.5,
+      "latency_s": 0.5,
+      "reason": "success",
+      "success": true,
+      "attempts": 1
+    },
+    {
+      "request": 1,
+      "arrival": 0.1,
+      "completed_at": 1.0,
+      "latency_s": 0.9,
+      "reason": "success",
+      "success": true,
+      "attempts": 1
+    },
+    {
+      "request": 2,
+      "arrival": 0.2,
+      "completed_at": 0.2,
+      "latency_s": 0.0,
+      "reason": "queue_overflow",
+      "success": false,
+      "attempts": 0
+    },
+    {
+      "request": 3,
+      "arrival": 0.3,
+      "completed_at": 0.3,
+      "latency_s": 0.0,
+      "reason": "queue_overflow",
+      "success": false,
+      "attempts": 0
+    }
+  ]
+}

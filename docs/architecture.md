@@ -2,66 +2,89 @@
 
 ```mermaid
 flowchart LR
-  A[Seeded Poisson arrivals] --> E[Stable time-ordered event heap]
-  E --> P[Timeout / retry / breaker policy]
-  P -->|admitted attempt| Q[FCFS queue: six server reservations]
+  A[Seeded Poisson arrivals] --> E[Stable event heap]
+  E --> P[Deadline and breaker gate]
+  P --> Q[Six workers and 24 FIFO waiting slots]
   Q --> D[Healthy service or outage failure]
   D --> R[Response at completion or timeout]
-  R -->|bounded exponential backoff| E
-  R --> M[Per-request outcome and load metrics]
-  P -->|open or half-open busy| M
+  R -->|bounded backoff| E
+  R --> M[Exactly one terminal outcome per request]
+  P -->|breaker rejection| M
+  Q -->|queue overflow| M
 ```
 
-## Workload
+## Workload and queue
 
-Requests arrive for 120 simulated seconds; response events are drained afterward.
-Interarrival times are exponential. Healthy and outage traffic average 4 requests/s;
-overload averages 80 requests/s. Six identical workers provide approximately 50
-healthy attempts/s at the 0.12s mean service demand. Each healthy demand is uniform
-0.08–0.16 seconds. No wall-clock sleeps or networking occur.
+Arrivals occur for 120 simulated seconds; response events drain afterward. Healthy
+and outage rates are 4/s, overload 80/s. Interarrival times are exponential. Six
+workers provide approximately 50 healthy attempts/s at mean service 0.12s; healthy
+service draws are uniform 0.08–0.16s. All policies share arrivals and pre-drawn
+per-request/per-attempt demands within each scenario/seed.
 
-The outage is [40,70) seconds, evaluated at **service start**, and makes an attempt
-take 2 seconds and fail. An attempt starting before recovery still fails afterward.
-Service demands are pre-drawn for three attempts per request so policy decisions do
-not change the common arrival stream or healthy service draws.
+The outage is [40,70), evaluated at **service start**. Affected attempts reserve 2s
+and fail, even if they finish after recovery. No wall-clock sleep or networking occurs.
 
-The worker min-heap assigns each admitted attempt to the earliest available worker,
-with FIFO ties resolved by the event sequence number. Start = max(attempt time,
-worker available time). The queue is unbounded. A client timeout includes queue
-waiting time; it does **not** cancel reserved or running dependency work. This models
-a dependency with ineffective cancellation and is central to the amplification result.
-`dependency_work_s` includes all reserved service, even work after traffic ends;
-`last_reserved_completion_s` exposes that backlog. Neither is CPU utilization.
+Each attempt reserves the earliest available worker: start = max(admission time,
+worker availability). A second heap tracks future starts. At most 24 admitted attempts
+wait, in addition to six running. A start equal to now no longer counts as waiting.
+If all workers are busy and the waiting limit is reached, the attempt is rejected
+and its original request terminates immediately **without retry**. A zero-slot queue
+admits only immediately runnable work.
 
-## Policies
+Client timeout includes queue time and **does not cancel queued or running work**.
+Reservations remain until service start/completion even after the client terminates.
+Reserved work includes that abandoned work; it is neither CPU utilization nor useful
+work. The last reserved completion timestamp reveals remaining dependency backlog.
 
-| Policy | Per-attempt timeout | Retries | Breaker |
-|---|---:|---:|---|
-| Baseline | 3s | 0 | None |
-| Bounded | 0.45s | 2 | None |
-| Breaker | 0.45s | 2 | Open after 5 consecutive observed failures |
+## Policies and deadlines
 
-Backoffs are 0.1s then 0.2s. A successful response terminates the request; otherwise
-it retries until the bound. Breaker rejections terminate immediately and are failures
-in availability. Breaker cooldown is 5s, then one half-open probe is allowed; all
-other attempts are rejected until its response. A successful probe closes the
-breaker; a failed probe reopens it. Generation tokens prevent pre-open responses
-from changing the new breaker's state. A probe may itself follow queue reservations.
-The bound on terminal time is 3s for baseline, 1.65s for bounded/breaker.
+| Policy | Attempt timeout | Retries | Total request budget | Breaker |
+|---|---:|---:|---:|---|
+| Baseline | 3s | 0 | 3s | None |
+| Bounded | 0.45s | 2 | 1.65s | None |
+| Breaker | 0.45s | 2 | 1.65s | Five consecutive observed failures |
 
-## Limits and next experiments
+Backoffs are 0.1s and 0.2s. The default total budget equals all allowed attempt
+timeouts plus backoffs. Custom policies may specify a shorter deadline. Responses
+are clipped to the absolute request deadline; a backoff crossing it terminates at
+the deadline with no additional dependency admission. Queue/breaker rejections may
+terminate sooner. Every original request gets exactly one terminal outcome.
 
-This is a single process, one shared breaker, one dependency, fixed service capacity,
-and one contiguous outage. It excludes network partitions, correlated multiple
-dependencies, autoscaling, cancellation, finite queues, adaptive traffic, jitter,
-idempotency errors, regional failover and cost modeling. Retries assume idempotent
-operations. A distributed fleet may synchronize retries and have separate breakers.
-The event ordering at exact timestamp ties is deterministic, not a concurrency model.
-Arrival generation uses Python's `random` implementation; byte-for-byte evidence is
-verified on the stated interpreter, not promised across every Python version.
+The breaker opens for 5s after five consecutive current-generation failures.
+Success resets the failure streak. The next attempt after cooldown transitions to
+half-open and becomes the sole probe; other half-open traffic is rejected. Probe
+success closes the breaker; failure reopens it. A probe rejected by the full queue
+also reopens because dependency health remains unknown. Generation tokens stop
+pre-open responses from mutating new breaker state, while those responses still
+determine their own request outcomes.
 
-Policy comparisons combine timeout and breaker choices; they are not a calibrated
-production configuration or exhaustive parameter search. No RTO/RPO, capacity plan,
-or statistical significance can be inferred. Next: sweep timeout/cooldown/capacity,
-increase seeds, measure recovery time explicitly, add bounded queues and cancellation,
-then compare against a disposable real service with injected faults.
+Events at identical times use insertion order. Initial arrival events are inserted
+before later-generated response events; an arrival at a failure response's timestamp
+can be admitted before that response opens the breaker. This deterministic convention
+is tested and is not a distributed-concurrency claim.
+
+## Audit surface and validation
+
+`simulate(..., trace=True)` includes ordered attempt requests/admissions/responses,
+breaker transitions and individual terminal outcomes. Explicit `arrivals` and
+`demands` support hand-computable fixtures. Inputs reject malformed, negative,
+non-finite and inappropriate boolean/fractional values. Non-finite derived budgets,
+deadlines, reservation ends, cooldown ends and accumulated work raise `ValueError`.
+Generated workloads are capped at one million expected/actual requests. Runtime
+assertions guard duplicate completion, conservation and per-request deadline bounds.
+
+## Limits
+
+One process, one shared breaker, one dependency, fixed capacity and one contiguous
+outage. No real model inference, persistent data, cancellation, autoscaling, jitter,
+adaptive traffic, multiple regions, distributed breaker coordination, or monetary
+costs. Retries assume idempotency. A real fleet can synchronize retries and run many
+independent breakers. Demand generation uses Python's `random`; byte reproduction
+is verified on the recorded interpreter, not guaranteed across all versions.
+
+Policy settings change timeout and retries together and are not an isolated causal
+experiment. Queue size 24 is an illustrative fixed assumption, not an optimized
+capacity plan. Three primary and ten additional seeds are descriptive. No production
+SLO, RTO/RPO, audit certification or measured failover can be inferred. Next useful
+experiments vary queue/cancellation/timeout settings, then validate with an isolated
+real dependency and owner-approved service objectives.

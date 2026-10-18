@@ -1,5 +1,5 @@
 import unittest
-from reliability_lab import POLICIES, Policy, percentile, simulate
+from reliability_lab import POLICIES, Policy, Scenario, percentile, simulate
 
 
 class ReliabilityTests(unittest.TestCase):
@@ -27,12 +27,20 @@ class ReliabilityTests(unittest.TestCase):
                 self.assertGreaterEqual(r['dependency_work_s'], 0)
 
     def test_timeout_retry_amplification_and_breaker_shedding(self):
-        baseline, bounded, breaker = [simulate(p) for p in POLICIES]
+        # Explicit legacy, effectively unbounded queue: retained comparison, not
+        # an acceptance goal for the now-bounded default experiment.
+        baseline, bounded, breaker = [simulate(p, queue_limit=100000) for p in POLICIES]
         self.assertGreater(bounded['attempts'], baseline['attempts'])
         self.assertGreater(breaker['breaker_rejections'], 0)
         self.assertLess(breaker['dependency_work_s'], bounded['dependency_work_s'])
         self.assertGreater(breaker['availability'], bounded['availability'])
         self.assertGreater(breaker['successes_arriving_after_75s'], 0)
+
+    def test_bounded_default_does_not_assume_breaker_is_best(self):
+        baseline, bounded, breaker = [simulate(p) for p in POLICIES]
+        self.assertLess(breaker['dependency_work_s'], bounded['dependency_work_s'])
+        self.assertLess(breaker['availability'], baseline['availability'])
+        self.assertGreater(bounded['queue_overflows'], 0)
 
     def test_overload_breaker_is_not_capacity_solution(self):
         r = simulate(POLICIES[2], 'overload')

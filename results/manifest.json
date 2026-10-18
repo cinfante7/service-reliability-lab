@@ -1,0 +1,29 @@
+{
+  "python_version": "3.13.7",
+  "primary_seeds": [
+    17,
+    29,
+    43
+  ],
+  "sensitivity_seeds": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10
+  ],
+  "sha256": {
+    "results/runs.json": "6062f2b3bb635225671e1f99a21bd9066e8cc9bf3be54a6810c21aacca583ce2",
+    "results/runs.csv": "313d08d8b8d0f777fcb03f1301ec24aa282a0dfc5230d36db1143c97823b1602",
+    "results/sensitivity/runs.json": "5930dadf72f08723dfa37ef14705da70b6db00251f5a4b85b91a467ccb1fad5d",
+    "results/sensitivity/runs.csv": "176649eb4bc7f2adfc0aaeb641e48672d8b0c275a129b2cfabda8c6fd21d61f4",
+    "results/report.html": "79ea190c735072c161688c6171dd9c4f63e6612e17864ea1a0e553f893e6ac08",
+    "results/summary.md": "5c85064d1c339dd7ba9e9d03302bc1350c049820b2750c2591f4da028334c75c",
+    "results/trace-example.json": "cd2edb602e78080a0330534e9e69239825ffe1e462f49593546052777c05af4a"
+  }
+}

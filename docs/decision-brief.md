@@ -1,34 +1,40 @@
 # Business continuity decision brief
 
-**Decision proposed:** for an idempotent, latency-sensitive dependency without effective
-cancellation, evaluate circuit breaking alongside a request budget, admission control
-and an approved degraded workflow. Do not deploy these numeric settings directly.
+**Decision proposed:** validate timeout budgets, cancellation and bounded admission
+together before adding an aggressive breaker. Pair rejected work with an approved
+deferred/manual workflow. Do not deploy these numeric settings directly.
 
-**Evidence:** in the simulated outage, retries increase attempts/request by 66.7%
-relative to baseline and reduce availability by 8.6 percentage points. The breaker
-cuts admitted attempts below one per original request, but availability remains
-6.0 points below baseline. Under continuous overload, all policies fail a hypothetical
-80% success target; breaker success reaches only 9.9%. Short terminal latency is
-partly fast rejection, and cannot substitute for service delivery.
+**Current bounded-model evidence:** outage success averages 75.4% baseline, 74.1%
+bounded retries and 70.0% breaker. Reserved work averages 224.6s, 226.2s and 64.6s;
+the breaker protects capacity by rejecting a mean 144.7 requests/run. Its 0.725
+attempts/request uses all arrivals, including requests with no admitted attempt.
+The breaker delivers fewer successful requests than either alternative here.
 
-**Business implication:** protecting a scarce dependency can preserve recovery capacity
-while denying immediate work. For an AI inference workflow, an explicitly labeled
-deferred/manual path may be preferable to repeated expensive inference attempts.
-That fallback is a proposed operational design, not an implemented or measured result.
-For non-idempotent writes, retrying without deduplication can add integrity risk.
+Under overload, baseline succeeds on 62.5% of arrivals, bounded retries on 0.7%,
+breaker on 9.9%. All miss an **illustrative**, noncontractual 80% success target.
+Short timeouts leave dependency reservations behind; retry work competes for queue
+slots. Baseline can wait for work that the short-timeout policies abandon. Timeout
+and retry settings change together, so this comparison cannot isolate retry effects.
 
-| Risk | Candidate control | Evidence still required |
+The original unbounded model produced more retry amplification; it is archived and
+not used as the current decision evidence. This sensitivity to queue design argues
+against selecting policies from attractive latency numbers alone.
+
+| Risk | Candidate control | Evidence still needed |
 |---|---|---|
-| Retry storm and stale queued work | Global attempt budget, cancellation, bounded queue | Fault-injection load test and server cancellation traces |
-| Breaker rejects critical work | Priority admission, manual/deferred workflow | Stakeholder-approved service tiers and exercise results |
-| Sustained overload | Capacity planning, rate limits, backpressure | Real arrival/service distributions and capacity sweep |
-| Misleading latency dashboard | Pair successful-only latency with success rate, rejection and work counters | Instrumentation review and alert exercise |
-| Incorrect recovery assumption | Recovery probes and supervised rollout | Dependency owner signoff and rollback drill |
+| Abandoned work consumes scarce capacity | Effective cancellation, admission limits, attempt budget | Server traces and isolated fault-injection load tests |
+| Aggressive breaker rejects critical requests | Priority admission, deferred/manual path | Approved service tiers and continuity exercise |
+| Sustained overload | Capacity planning and backpressure | Real arrival/service distributions and queue/capacity sweeps |
+| Fast failures make latency look healthy | Pair success latency with success, rejection and work counters | Instrumentation review and alert exercise |
+| Retry duplicates non-idempotent actions | Deduplication or no retry | Dependency integrity contract and failure tests |
 
-**Acceptance gate for a future pilot:** service owner defines availability/latency SLOs
-and impact tiers; continuity owner defines an RTO and fallback workflow; engineering
-validates cancellation/idempotency and tests outages longer than cooldown. Capture
-request, attempt, rejection, queue and recovery evidence under controlled load. Roll
-back on agreed success-rate or load guardrail breaches. No RPO is claimed: this model
-has no persistent data or data-loss behavior. Approval roles are proposed roles, not
-actual signoffs. This demonstration supports risk reasoning, not audit certification.
+**Business implication for an AI-backed workflow:** a labeled manual or deferred path
+may preserve service continuity when inference capacity is scarce. This is a proposed
+workflow, not an implemented or measured fallback. There is no trained model here.
+
+**Future pilot gate:** service owner defines success/latency SLOs and impact tiers;
+continuity owner defines RTO and fallback workflow; engineering validates cancellation,
+idempotency and longer outages. Agree guardrails and rollback criteria before the
+pilot. These are proposed responsibilities, not actual approvals. No RPO is claimed:
+the simulator has no persistent data or data-loss model. No compliance certification
+or demonstrated failover is implied.

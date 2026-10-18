@@ -1,3 +1,3 @@
 * text=auto eol=lf
 # Preserve csv.writer's exact CRLF bytes for artifact hash reproduction.
-*.csv -text
+*.csv -text whitespace=cr-at-eol

@@ -2,71 +2,82 @@
 
 **Christopher Infante | Systems engineering · reliability analysis · continuity risk**
 
-A reproducible, standard-library Python experiment examining a practical question:
-**when a dependency slows down, do retries help users or prolong the failure?**
-This is a synthetic portfolio demonstration, never a client engagement or production result.
-It complements AI/ML and GRC work by examining the reliability of a dependency that could
-serve model inference, and translating engineering evidence into a continuity decision.
-There is no trained model, real inference traffic, or compliance certification here.
+A reproducible Python experiment examining a practical question: **when a dependency
+slows down, do retries help users or prolong failure?** Entirely synthetic; never a
+client engagement or production result. It complements AI/ML and GRC work through
+dependency reliability and evidence-backed continuity decisions. No trained model,
+real inference traffic, or compliance certification is claimed.
 
-The strongest finding: during a seeded 30-second dependency outage, bounded retries
-increased attempts per request from **1.000 to 1.667** and reduced successful responses
-from **76.0% to 67.4%**. A circuit breaker reduced attempts to **0.725** and recovered
-some availability (**70.0%**), while intentionally rejecting requests. It did **not**
-beat the baseline's availability. Faster terminal responses alone are a misleading win.
+**Bounded queue admission changes the policy comparison.** With a 24-slot waiting
+queue, outage success averages **75.4% baseline, 74.1% bounded retries, and 70.0%
+breaker**. The breaker reserves less work while rejecting more requests. Under
+sustained overload, success is **62.5%, 0.7%, and 9.9%**, respectively. Protecting
+capacity and delivering requests are distinct objectives.
 
-## Run in under a minute
+Open the [static evidence report](results/report.html) in a browser, or read its
+[generated tables](results/summary.md). All 27 primary runs and 90 additional seed
+sensitivity runs are retained. [Original unbounded runs](results/legacy-unbounded/runs.json)
+are archived separately; their stronger retry amplification is not the default
+bounded model's finding. The queue requirement changed the model, not a desired winner.
 
-Python 3.10+; no dependencies, installations, credentials, network access, or paid APIs.
-Validated locally with Python 3.13.7 on Windows.
+## Reproduce
 
-```powershell
+Python 3.10+; validated on Python **3.13.7**, Windows. Standard library only: no
+installation, dependencies, credentials, external datasets, networking or paid APIs
+are needed to run experiments or build the report.
+
+```console
 python -m unittest discover -s tests -v
 python reliability_lab.py
-python reliability_lab.py --output results-verify
-Get-FileHash results/runs.json,results-verify/runs.json -Algorithm SHA256
+python reliability_lab.py --output results/sensitivity --seeds 1 2 3 4 5 6 7 8 9 10
+python build_report.py
+python verify_reproduction.py
 ```
 
-Portable equivalent for the final check:
+The final command regenerates both populations into temporary directories and checks
+JSON/CSV bytes against recorded results. It also checks deterministic report rebuilds.
+The 28-test suite includes targeted timing fixtures and full-trace invariants across
+all 27 primary scenario/policy/seed combinations.
+
+The HTML opens directly from disk and has no JavaScript, remote assets or fonts.
+For an optional local preview:
+
 ```console
-python -c "from pathlib import Path; assert Path('results/runs.json').read_bytes() == Path('results-verify/runs.json').read_bytes(); print('Identical JSON')"
+python -m http.server 8764 --bind 127.0.0.1
 ```
 
-Committed [CSV](results/runs.csv) and [JSON](results/runs.json) contain all 27 runs:
-three scenarios × three policies × seeds 17, 29, 43. Each policy receives identical
-arrivals and per-request service draws within a scenario/seed. Change seeds with
+Open `http://127.0.0.1:8764/results/report.html`; stop with Ctrl+C.
+Experiment CLI supports other seeds/output folders, e.g.
 `python reliability_lab.py --seeds 5 11 19 --output custom-results`.
+Report generation intentionally uses the documented primary and sensitivity populations.
 
-## Actual results
+## What the outputs mean
 
-Arithmetic mean of per-run metrics across the three seeds, rounded here only.
-Availability means successful application responses / original requests. No fallback
-response is counted as success. These are finite-horizon experiment metrics, not SLA estimates.
+Availability is successful responses / **all original arrivals**, including queue and
+breaker rejections. Attempts/request can be below one because rejected requests may
+consume no dependency attempt. No degraded fallback counts as success. These finite
+experiment success fractions are not uptime SLAs.
 
-| Scenario | Policy | Availability | Success ≤1s | Attempts / request | Terminal latency p95 (s) |
-|---|---|---:|---:|---:|---:|
-| Healthy | Baseline | 100.0% | 100.0% | 1.000 | 0.156 |
-| Healthy | Bounded | 100.0% | 100.0% | 1.000 | 0.156 |
-| Healthy | Breaker | 100.0% | 100.0% | 1.000 | 0.156 |
-| Outage | Baseline | 76.0% | 73.9% | 1.000 | 3.000 |
-| Outage | Bounded | 67.4% | 66.8% | 1.667 | 1.650 |
-| Outage | Breaker | 70.0% | 70.0% | 0.725 | 0.156 |
-| Overload | Baseline | 4.0% | 1.5% | 1.000 | 3.000 |
-| Overload | Bounded | 0.6% | 0.6% | 2.989 | 1.650 |
-| Overload | Breaker | 9.9% | 9.9% | 0.186 | 0.550 |
+Timeouts do not cancel dependency reservations. Retries can consume scarce queue
+slots after the client has stopped waiting. The 0.45s attempt timeout may expire in
+the queue when the baseline's 3s timeout would succeed. This comparison changes
+timeouts and retries together; it does not isolate retries alone. Queue overflow
+terminates the request without retry and limits amplification.
 
-Terminal latency includes fast failures and breaker rejections. Successful-only p95,
-breaker rejection/open counts, failed attempts, dependency work seconds, and the final
-reserved dependency completion time are in the raw files. Means of p95 values are
-**not** pooled population percentiles. Three seeds are illustrative, not confidence intervals.
+Terminal latency includes fast failures. Read it alongside successful-only latency,
+success rate, breaker rejection, overflow and reserved work. Summary tables average
+per-run metrics; means of p95 values are not pooled percentiles. Seed ranges are
+descriptive, not confidence intervals. No universal policy improvement is promised.
 
-## Engineering evidence
+## Inspect the engineering evidence
 
-- [Architecture and model contracts](docs/architecture.md): event flow, queue semantics, policy state and limitations.
-- [Requirements-to-test traceability](docs/traceability.md): explicit acceptance criteria and automated evidence.
-- [Business continuity decision brief](docs/decision-brief.md): risk, tradeoffs and staged validation.
-- [Notion case-study draft](docs/notion-case-study.md): ready for integration after review.
-- [Verification record](docs/verification.md): commands and reproducibility evidence.
+- [Architecture and contracts](docs/architecture.md): event flow, bounded queue, deadlines and breaker state.
+- [Requirements-to-test traceability](docs/traceability.md): acceptance criteria and targeted tests.
+- [Full metric dictionary](docs/metrics.md): every field, denominator, unit and terminal reason.
+- [Continuity decision brief](docs/decision-brief.md): implications and validation gates.
+- [Verification record](docs/verification.md): exact commands, independent review and browser QA.
+- [Notion case-study draft](docs/notion-case-study.md): prepared for later integration.
+- [Raw primary CSV](results/runs.csv) / [JSON](results/runs.json); [all sensitivity runs](results/sensitivity/runs.json).
 
-No public repository or remote upload is created by this project. Suggested repository:
-`service-reliability-lab`.
+Suggested repository: **service-reliability-lab**. Local Git only; no remote repository
+or upload has been created.
